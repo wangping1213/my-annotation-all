@@ -33,7 +33,7 @@ public class TableToExcel {
             String htmlStr = result;
             String sheetName = "222";
             //生成Excel工作薄对象
-            HSSFWorkbook wb = ParseHtmlToXls.parseHtmlToXlsForMultiTitle(htmlStr, sheetName);
+            HSSFWorkbook wb = ParseHtmlToXls.parseHtmlToXlsForCommon(htmlStr, sheetName);
             OutputStream outputStream = new FileOutputStream("C:\\Users\\X1C\\Desktop\\333.xls");
             wb.write(outputStream);
         } catch (Exception e) {
