@@ -159,7 +159,7 @@ public class ParseHtmlToXls {
         int iTr = 0;
         int rowNum = 0;
         int jTd = 0;
-        Map<Integer, Integer> nextColMap = new HashMap<Integer, Integer>();
+        Map<Integer, RowNextColumn> nextColMap = new HashMap<Integer, RowNextColumn>();
         List<CellRangeAddress> mergeList = new ArrayList<CellRangeAddress>();
         if (itTrs.hasNext()) {
             headEle = (Element) itTrs.next();
@@ -186,13 +186,9 @@ public class ParseHtmlToXls {
                 eleTd = (Element) itTds.next();
                 updateMergeList(eleTd, mergeList, rowNum - 1, jTd, nextColMap);
                 if (null != nextColMap.get(rowNum - 1)) {
-                    if (StringUtils.isNotEmpty(eleTd.attr("rowspan")) || StringUtils.isNotEmpty(eleTd.attr("colspan"))) {
-                        cell = row.createCell(jTd);
-                    } else {
-                        cell = row.createCell(nextColMap.get(rowNum - 1));
-                    }
-                    jTd = nextColMap.get(rowNum - 1);
-                    nextColMap.put(rowNum - 1, null);
+                    jTd = nextColMap.get(rowNum - 1).pollNextColIndex();
+                    cell = row.createCell(jTd);
+                    jTd = nextColMap.get(rowNum - 1).getFirstNextColIndex();
                 } else {
                     if (null != row.getCell(jTd)) {
                         jTd++;
@@ -256,7 +252,7 @@ public class ParseHtmlToXls {
         int colMinWidth = 5 * 256;
         int colMaxWidth = 35 * 256;
         int colWidth = 0;
-        Map<Integer, Integer> nextColMap = new HashMap<Integer, Integer>();
+        Map<Integer, RowNextColumn> nextColMap = new HashMap<Integer, RowNextColumn>();
         Map<Integer, Integer> colMaxWidthMap = new HashMap<Integer, Integer>();//保存每一列的最大宽度
         List<CellRangeAddress> mergeList = new ArrayList<CellRangeAddress>();
         while (itTrs.hasNext()) {
@@ -287,16 +283,16 @@ public class ParseHtmlToXls {
                 eleTd = (Element) itTds.next();
                 updateMergeList(eleTd, mergeList, rowNum - 1, jTd, nextColMap);
                 if (null != nextColMap.get(rowNum - 1)) {
+                    jTd = nextColMap.get(rowNum - 1).pollNextColIndex();
                     if (StringUtils.isNotEmpty(eleTd.attr("rowspan"))
                             || StringUtils.isNotEmpty(eleTd.attr("colspan"))) {
                         cell = row.createCell(jTd);
                         updateColMaxWidthMap(colMaxWidthMap, eleTd, jTd);
                     } else {
-                        cell = row.createCell(nextColMap.get(rowNum - 1));
+                        cell = row.createCell(jTd);
                         updateColMaxWidthMap(colMaxWidthMap, eleTd, rowNum - 1);
                     }
-                    jTd = nextColMap.get(rowNum - 1);
-                    nextColMap.put(rowNum - 1, null);
+                    jTd = nextColMap.get(rowNum - 1).getFirstNextColIndex();
                 } else {
                     updateColMaxWidthMap(colMaxWidthMap, eleTd, jTd);
                     if (null != row.getCell(jTd)) {
@@ -367,7 +363,7 @@ public class ParseHtmlToXls {
      * @throws
      */
     private static HSSFSheet insertHeadRow(Element headEle, HSSFSheet sheet,
-                                           HSSFCellStyle titleStyle, List<CellRangeAddress> mergeList, Map<Integer, Integer> nextColMap) {
+                                           HSSFCellStyle titleStyle, List<CellRangeAddress> mergeList, Map<Integer, RowNextColumn> nextColMap) {
         HSSFRow row = null;
         HSSFCell cell = null;
         Iterator<?> itTds = null;
@@ -384,10 +380,9 @@ public class ParseHtmlToXls {
                 if (StringUtils.isNotEmpty(eleTd.attr("rowspan")) || StringUtils.isNotEmpty(eleTd.attr("colspan"))) {
                     cell = row.createCell(jTd);
                 } else {
-                    cell = row.createCell(nextColMap.get(iTr));
+                    cell = row.createCell(nextColMap.get(iTr).getFirstNextColIndex());
                 }
-                jTd = nextColMap.get(iTr);
-                nextColMap.put(iTr, null);
+                jTd = nextColMap.get(iTr).pollNextColIndex();
             } else {
                 cell = row.createCell(jTd++);
             }
@@ -410,7 +405,7 @@ public class ParseHtmlToXls {
      * @throws
      */
     private static void updateMergeList(Element eleTd, List<CellRangeAddress> mergeList, int iTr, int jTd,
-                                        Map<Integer, Integer> nextColMap) {
+                                        Map<Integer, RowNextColumn> nextColMap) {
         String rowspan = "";
         int rowspan_int = 0;
         String colspan = "";
@@ -421,26 +416,67 @@ public class ParseHtmlToXls {
 
         try {
             if (StringUtils.isEmpty(rowspan) && StringUtils.isEmpty(colspan)) {
-                return;
+                if (null == nextColMap.get(iTr)) {
+                    nextColMap.put(iTr, new RowNextColumn(iTr));
+                } else {
+                    jTd = nextColMap.get(iTr).getFirstNextColIndex();
+                }
+
+                if (null != nextColMap.get(iTr).getLastNextColIndex() && nextColMap.get(iTr).getLastNextColIndex() > jTd + 1) {
+                    return;
+                }
+                nextColMap.get(iTr).offBatchArgs(jTd, jTd + 1);
+
             } else if (StringUtils.isNotEmpty(rowspan) && StringUtils.isEmpty(colspan)) {
                 rowspan_int = new Integer(rowspan.trim());
                 mergeTemp = new CellRangeAddress(iTr, iTr + rowspan_int - 1, jTd, jTd);
                 mergeList.add(mergeTemp);
+
+                if (null == nextColMap.get(iTr)) {
+                    nextColMap.put(iTr, new RowNextColumn(iTr));
+                }
+                nextColMap.get(iTr).offBatchArgs(jTd, jTd+1);
                 for (int i = iTr + 1; i < iTr + rowspan_int; i++) {
-                    nextColMap.put(i, jTd + 1);
+                    if (null == nextColMap.get(i)) {
+                        nextColMap.put(i, new RowNextColumn(i));
+                    }
+                    if (null != nextColMap.get(i).getLastNextColIndex() && nextColMap.get(i).getLastNextColIndex() == jTd) {
+                        nextColMap.get(i).popNextColIndex();
+                    }else if (null != nextColMap.get(i).getLastNextColIndex()) {
+                        nextColMap.get(i).offBatch(nextColMap.get(i).popNextColIndex(), jTd-1);
+                    }
+
+                    nextColMap.get(i).offBatchArgs(jTd + 1);
                 }
             } else if (StringUtils.isNotEmpty(colspan) && StringUtils.isEmpty(rowspan)) {
                 colspan_int = new Integer(colspan.trim());
                 mergeTemp = new CellRangeAddress(iTr, iTr, jTd, jTd + colspan_int - 1);
                 mergeList.add(mergeTemp);
-                nextColMap.put(iTr, jTd + colspan_int);
+                if (null == nextColMap.get(iTr)) {
+                    nextColMap.put(iTr, new RowNextColumn(iTr));
+                }
+                nextColMap.get(iTr).offBatchArgs(jTd, jTd + colspan_int);
             } else if (StringUtils.isNotEmpty(rowspan) && StringUtils.isNotEmpty(colspan)) {
                 rowspan_int = new Integer(rowspan.trim());
                 colspan_int = new Integer(colspan.trim());
                 mergeTemp = new CellRangeAddress(iTr, iTr + rowspan_int - 1, jTd, jTd + colspan_int - 1);
                 mergeList.add(mergeTemp);
-                for (int i = iTr; i < iTr + rowspan_int; i++) {
-                    nextColMap.put(i, jTd + colspan_int);
+                if (null == nextColMap.get(iTr)) {
+                    nextColMap.put(iTr, new RowNextColumn(iTr));
+                }
+                nextColMap.get(iTr).offBatchArgs(jTd, jTd+rowspan_int);
+                for (int i = iTr + 1; i < iTr + rowspan_int; i++) {
+                    if (null == nextColMap.get(i)) {
+                        nextColMap.put(i, new RowNextColumn(iTr));
+                    }
+
+                    if (null != nextColMap.get(i).getLastNextColIndex() && nextColMap.get(i).getLastNextColIndex() == jTd) {
+                        nextColMap.get(i).popNextColIndex();
+                    }else if (null != nextColMap.get(i).getLastNextColIndex()) {
+                        nextColMap.get(i).offBatch(nextColMap.get(i).popNextColIndex(), jTd-1);
+                    }
+
+                    nextColMap.get(i).offBatchArgs(jTd + rowspan_int);
                 }
             }
         } catch (NumberFormatException e) {
@@ -498,41 +534,119 @@ public class ParseHtmlToXls {
         return cellStyle;
     }
 
-    public static void main(String[] args) {
-        String htmlStr =
-                "<table boder='1'>" +
-                        "			<tbody><tr style='font-family: bold;'>" +
-                        "	<td width='5%'>" +
-                        "		序号" +
-                        "	</td>" +
-                        "	<td width='8%'>" +
-                        "		账号" +
-                        "	</td>" +
-                        "</tr>" +
-                        "<!-- ngRepeat: user in userlist2 --><tr ng-repeat='user in userlist2' class='ng-scope'>" +
-                        "	<td width='5%' class='ng-binding'>" +
-                        "		0" +
-                        "	</td>" +
-                        "	<td width='8%' class='ng-binding' my-color='#3f7'>" +
-                        "		添加系统用户" +
-                        "	</td>" +
-                        "</tr><!-- end ngRepeat: user in userlist2 --><tr ng-repeat='user in userlist2' class='ng-scope'>" +
-                        "<td width='5%' class='ng-binding'>" +
-                        "	1" +
-                        "</td>" +
-                        "<td width='8%' class='ng-binding'>" +
-                        "	zs" +
-                        "</td>" +
-                        "</tr>" +
-                        "</tbody></table>";
-        try {
-            ParseHtmlToXls.parseHtmlToXlsForCommon(htmlStr, "");
-//			System.out.println(100005/20000.0);
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+}
 
+/**
+ * 存放每一行中下一个cell的位置对象
+ * @author wangping
+ * @version 1.0
+ * @since 2016/3/15
+ */
+class RowNextColumn {
+    /**
+     * 行号
+     */
+    private int rowIndex = 0;
+    /**
+     * 一个既可以作为队列（先进先出），也可以作为堆栈（后进先出）使用的链表
+     */
+    private LinkedList<Integer> nextColIndexList = new LinkedList<Integer>();
+
+    public RowNextColumn(int rowIndex) {
+        this.rowIndex = rowIndex;
+    }
+
+    /**
+     * 在队列最前面插入元素（多个）
+     * @param indexs
+     */
+    public void offBatchArgs(Integer... indexs) {
+        for (Integer index : indexs) {
+            if (!this.nextColIndexList.contains(index)) {
+                this.nextColIndexList.offer(index);
+            }
+        }
+    }
+
+    /**
+     * 在堆栈最后插入元素（多个）
+     * @param indexs
+     */
+    public void pushBatchArgs(Integer... indexs) {
+        for (Integer index : indexs) {
+            if (!this.nextColIndexList.contains(index)) {
+                this.nextColIndexList.push(index);
+            }
+        }
+    }
+
+    /**
+     * 在队列中批量插入元素（顺序）
+     * @param startIndex
+     * @param endIndex
+     */
+    public void offBatch(int startIndex, int endIndex) {
+        for (int j = startIndex; j <= endIndex; j++) {
+            if (!this.nextColIndexList.contains(j)) {
+                this.nextColIndexList.offer(j);
+            }
+        }
+    }
+
+    /**
+     * 在堆栈中批量插入元素（顺序）
+     * @param startIndex
+     * @param endIndex
+     */
+    public void pushBatch(int startIndex, int endIndex) {
+        for (int j = endIndex; j >= startIndex; j--) {
+            if (!this.nextColIndexList.contains(j)) {
+                this.nextColIndexList.push(j);
+            }
+        }
+    }
+
+    /**
+     * 判断在队列中是否存在当前元素
+     * @param nextColIndex
+     * @return
+     */
+    public boolean containKey(Integer nextColIndex) {
+        return nextColIndexList.contains(nextColIndex);
+    }
+
+    /**
+     * 弹出最后的元素，并返回对应的值
+     * @return
+     */
+    public Integer popNextColIndex() {
+        return nextColIndexList.pollLast();
+    }
+
+    /**
+     * 弹出最前的元素，并返回对应的值
+     * @return
+     */
+    public Integer pollNextColIndex() {
+        return nextColIndexList.pollFirst();
+    }
+
+    /**
+     * 返回最前面的元素值
+     * @return
+     */
+    public Integer getFirstNextColIndex() {
+        Integer nextColIndex = nextColIndexList.peekFirst();
+        return nextColIndex;
+    }
+
+    /**
+     * 返回最后的元素值
+     * @return
+     */
+    public Integer getLastNextColIndex() {
+        Integer nextColIndex = nextColIndexList.peekLast();
+        return nextColIndex;
     }
 
 }
