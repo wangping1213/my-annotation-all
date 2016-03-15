@@ -199,6 +199,7 @@ public class ParseHtmlToXls {
                 cell.setCellStyle(getNewCellStyle(eleTd, contentSonStyle, wb));
                 cell.setCellValue(StringUtils.trim(eleTd.text()));
             }
+            nextColMap.put(iTr, null);
             iTr++;
             jTd = 0;
         }
@@ -266,11 +267,11 @@ public class ParseHtmlToXls {
                     }
                 }
 
-                for (Integer col : colMaxWidthMap.keySet()) {
-                    colWidth = colMinWidth < colMaxWidthMap.get(col) * 256 ? colMaxWidthMap.get(col) * 256 : colMinWidth;
+                for (Map.Entry<Integer, Integer> entry : colMaxWidthMap.entrySet()) {
+                    colWidth = colMinWidth < colMaxWidthMap.get(entry.getValue()) * 256 ? colMaxWidthMap.get(entry.getValue()) * 256 : colMinWidth;
                     colWidth = colMaxWidth >= colWidth ? colWidth : colMaxWidth;
                     colWidth = (int) (colWidth * 1.14388);
-                    sheet.setColumnWidth(col, colWidth);
+                    sheet.setColumnWidth(entry.getKey(), colWidth);
                 }
                 sheet = wb.createSheet(StringUtils.isEmpty(sheetName) ? "Sheet" : sheetName);
                 mergeList = new ArrayList<CellRangeAddress>();
@@ -310,6 +311,7 @@ public class ParseHtmlToXls {
                 }
                 cell.setCellValue(StringUtils.trim(eleTd.text()));
             }
+            nextColMap.put(iTr, null);
             iTr++;
             jTd = 0;
         }
@@ -322,11 +324,11 @@ public class ParseHtmlToXls {
         }
 
 
-        for (Integer col : colMaxWidthMap.keySet()) {
-            colWidth = colMinWidth < colMaxWidthMap.get(col) * 256 ? colMaxWidthMap.get(col) * 256 : colMinWidth;
+        for (Map.Entry<Integer, Integer> entry : colMaxWidthMap.entrySet()) {
+            colWidth = colMinWidth < entry.getValue() * 256 ? entry.getValue() * 256 : colMinWidth;
             colWidth = colMaxWidth >= colWidth ? colWidth : colMaxWidth;
             colWidth = (int) (colWidth * 1.14388);
-            sheet.setColumnWidth(col, colWidth);
+            sheet.setColumnWidth(entry.getKey(), colWidth);
         }
 
         colorMap.clear();
@@ -396,13 +398,11 @@ public class ParseHtmlToXls {
 
     /**
      * 更新合并列表，将所有td中的合并操作添加到合并列表中
-     *
-     * @param eleTd      当前列对象
-     * @param mergeList  合并列表
-     * @param iTr        当前行序号
-     * @param jTd        当前列序号
-     * @param nextColMap
-     * @throws
+     * @param eleTd 当前td对象
+     * @param mergeList 合并对象
+     * @param iTr 当前tr序号
+     * @param jTd 当前td序号
+     * @param nextColMap 每一行对应的下一个位置对象
      */
     private static void updateMergeList(Element eleTd, List<CellRangeAddress> mergeList, int iTr, int jTd,
                                         Map<Integer, RowNextColumn> nextColMap) {
