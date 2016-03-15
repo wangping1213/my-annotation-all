@@ -19,7 +19,7 @@ public class TableToExcel {
 
     public static void main(String[] args) throws Exception {
 
-        String fileName = "templates/table.vm";
+        String fileName = "templates/table_multi.vm";
         Map<String, Object> map = new HashMap<String, Object>();
         //类Person必须是public的，也就是说必须是一个单独的类文件***
         List<Person> temp = new ArrayList<Person>();
@@ -33,8 +33,8 @@ public class TableToExcel {
             String htmlStr = result;
             String sheetName = "222";
             //生成Excel工作薄对象
-            HSSFWorkbook wb = ParseHtmlToXls.parseHtmlToXlsForCommon(htmlStr, sheetName);
-            OutputStream outputStream = new FileOutputStream("C:\\Users\\X1C\\Desktop\\222.xls");
+            HSSFWorkbook wb = ParseHtmlToXls.parseHtmlToXlsForMultiTitle(htmlStr, sheetName);
+            OutputStream outputStream = new FileOutputStream("C:\\Users\\X1C\\Desktop\\333.xls");
             wb.write(outputStream);
         } catch (Exception e) {
             e.printStackTrace();

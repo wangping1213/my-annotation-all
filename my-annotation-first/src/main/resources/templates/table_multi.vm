@@ -1,0 +1,21 @@
+<table>
+    <tr>
+        <td my-head colspan="3">人员统计表</td>
+    </tr>
+    <tr>
+        <td my-title rowspan="2">单位</td>
+        <td my-title colspan="2">人员</td>
+    </tr>
+    <tr>
+        <td my-title>姓名</td>
+        <td my-title>年龄</td>
+    </tr>
+    #foreach ($person in $list)
+        <tr>
+            <td>$person.no</td>
+            <td>$person.name</td>
+            <td>$person.age</td>
+        </tr>
+    #end
+</table>
+
