@@ -26,7 +26,20 @@ import java.util.List;
  */
 public class ParseHtmlToXls {
 
-    public static final int WIDTH_MULT = 300; // width per char
+    /**
+     * 每一个sheet的最大行数
+     */
+    public static final int SHEET_MAX_ROWS = 20000;
+
+    /**
+     * 每一列的最小宽度
+     */
+    private static final int COL_MIN_WIDTH = 5 * 256;
+
+    /**
+     * 每一列的最大宽度
+     */
+    private static final int COL_MAX_WIDTH = 35 * 256;
 
     /**
      * 保存已经添加的颜色和序号的映射表
@@ -245,20 +258,16 @@ public class ParseHtmlToXls {
         HSSFCellStyle headStyle = getHeadStyle(wb);
         HSSFCellStyle contentSonStyle = getContentStyle(wb);
 
-        int sheetMaxLength = 20000;
         int sheetNum = 0;
         int iTr = 0;
         int rowNum = 0;
         int jTd = 0;
-        int colMinWidth = 5 * 256;
-        int colMaxWidth = 35 * 256;
-        int colWidth = 0;
         Map<Integer, RowNextColumn> nextColMap = new HashMap<Integer, RowNextColumn>();
         Map<Integer, Integer> colMaxWidthMap = new HashMap<Integer, Integer>();//保存每一列的最大宽度
         List<CellRangeAddress> mergeList = new ArrayList<CellRangeAddress>();
         while (itTrs.hasNext()) {
             eleTr = (Element) itTrs.next();
-            if (sheetNum * sheetMaxLength <= iTr) {
+            if (sheetNum * SHEET_MAX_ROWS <= iTr) {
                 sheetNum++;
                 for (CellRangeAddress merge : mergeList) {
                     if (null != sheet) {
@@ -267,12 +276,8 @@ public class ParseHtmlToXls {
                     }
                 }
 
-                for (Map.Entry<Integer, Integer> entry : colMaxWidthMap.entrySet()) {
-                    colWidth = colMinWidth < colMaxWidthMap.get(entry.getValue()) * 256 ? colMaxWidthMap.get(entry.getValue()) * 256 : colMinWidth;
-                    colWidth = colMaxWidth >= colWidth ? colWidth : colMaxWidth;
-                    colWidth = (int) (colWidth * 1.14388);
-                    sheet.setColumnWidth(entry.getKey(), colWidth);
-                }
+                updateAllColWidthWithMap(colMaxWidthMap, sheet);
+
                 sheet = wb.createSheet(StringUtils.isEmpty(sheetName) ? "Sheet" : sheetName);
                 mergeList = new ArrayList<CellRangeAddress>();
                 colMaxWidthMap = new HashMap<Integer, Integer>();
@@ -323,19 +328,28 @@ public class ParseHtmlToXls {
             }
         }
 
-
-        for (Map.Entry<Integer, Integer> entry : colMaxWidthMap.entrySet()) {
-            colWidth = colMinWidth < entry.getValue() * 256 ? entry.getValue() * 256 : colMinWidth;
-            colWidth = colMaxWidth >= colWidth ? colWidth : colMaxWidth;
-            colWidth = (int) (colWidth * 1.14388);
-            sheet.setColumnWidth(entry.getKey(), colWidth);
-        }
+        updateAllColWidthWithMap(colMaxWidthMap, sheet);
 
         colorMap.clear();
         colorExistsMap.clear();
         colorStyleMap.clear();
 
         return wb;
+    }
+
+    /**
+     * 更新每一列的宽度
+     * @param colMaxWidthMap
+     * @param sheet
+     */
+    private static void updateAllColWidthWithMap(Map<Integer, Integer> colMaxWidthMap, HSSFSheet sheet) {
+        int colWidth = 0;
+        for (Map.Entry<Integer, Integer> entry : colMaxWidthMap.entrySet()) {
+            colWidth = COL_MIN_WIDTH < entry.getValue() * 256 ? entry.getValue() * 256 : COL_MIN_WIDTH;
+            colWidth = COL_MAX_WIDTH >= colWidth ? colWidth : COL_MAX_WIDTH;
+            colWidth = (int) (colWidth * 1.14388);
+            sheet.setColumnWidth(entry.getKey(), colWidth);
+        }
     }
 
     /**
@@ -415,8 +429,8 @@ public class ParseHtmlToXls {
         colspan = eleTd.attr("colspan");
 
         try {
-            if (StringUtils.isEmpty(rowspan) && StringUtils.isEmpty(colspan)) {
-                if (null == nextColMap.get(iTr)) {
+            if (StringUtils.isEmpty(rowspan) && StringUtils.isEmpty(colspan)) {//没有rowspan和colspan
+                if (null == nextColMap.get(iTr)) {//若当前行没有对象
                     nextColMap.put(iTr, new RowNextColumn(iTr));
                 } else {
                     jTd = nextColMap.get(iTr).getFirstNextColIndex();
