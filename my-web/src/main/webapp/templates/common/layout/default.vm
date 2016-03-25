@@ -1,0 +1,10 @@
+<html>
+<head>
+    <title>my-web</title>
+</head>
+<body>
+<div id="content" name="content">
+    $screen_content
+</div>
+</body>
+</html>

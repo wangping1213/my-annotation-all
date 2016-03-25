@@ -11,7 +11,7 @@ import java.util.*;
 public class HelloVelocity {
     public static void main(String[] args) throws Exception {
 
-        String fileName = "templates/hellovelocity.vm";
+        String fileName = "templates/table.vm";
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("name", "velocity");
         map.put("date", (new Date()).toString());
@@ -20,9 +20,9 @@ public class HelloVelocity {
         temp.add("2");
         map.put("list", temp);
 
-//        String result = TemplateUtil.parseTemplate(map, fileName);
-//
-//        System.out.println();
+        String result = TemplateUtil.parseTemplate(map, fileName);
+
+        System.out.println(result);
     }
 
 }

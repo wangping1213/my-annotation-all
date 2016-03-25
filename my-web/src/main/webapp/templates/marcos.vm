@@ -1,0 +1,39 @@
+#macro(myTable $list $flag)
+<table>
+    <tr>
+        <td>序号$flag</td>
+        <td>姓名</td>
+        <td>年龄</td>
+        <td>号码</td>
+        <td>ddd</td>
+    </tr>
+    #foreach ($person in $list)
+        <tr color="#235">
+            <td>$velocityCount</td>
+            <td>$person.name</td>
+            <td>$person.nick</td>
+            <td colspan="2">$person.age</td>
+        </tr>
+    #end
+</table>
+#end
+
+#macro(thisPageEnd $list $flag)
+<table>
+    <tr>
+        <td>序号$flag</td>
+        <td>姓名</td>
+        <td>年龄</td>
+        <td>号码</td>
+        <td>ddd</td>
+    </tr>
+    #foreach ($person in $list)
+        <tr color="#235">
+            <td>$velocityCount</td>
+            <td>$person.name</td>
+            <td>$person.nick</td>
+            <td colspan="2">$person.age</td>
+        </tr>
+    #end
+</table>
+#end

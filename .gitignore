@@ -1,6 +1,8 @@
 .idea/
 my-annotation-first/target/
 my-annotation-first/*.iml
+my-excel-reader/target/
+my-excel-reader/*.iml
 my-web/target/
 my-web/*.iml
 /*.iml

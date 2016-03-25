@@ -5,11 +5,6 @@
 <web-app>
     <display-name>mvc</display-name>
 
-    <!--<context-param>-->
-        <!--<param-name>contextConfigLocation</param-name>-->
-        <!--<param-value>classpath*:spring/applicationContext.xml</param-value>-->
-    <!--</context-param>-->
-
     <context-param>
         <param-name>logbackConfigLocation</param-name>
         <param-value>WEB-INF/logback.xml</param-value>
@@ -28,10 +23,6 @@
         <filter-name>encoding</filter-name>
         <url-pattern>/*</url-pattern>
     </filter-mapping>
-
-    <!--<listener>-->
-        <!--<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>-->
-    <!--</listener>-->
 
     <listener>
         <listener-class>ch.qos.logback.ext.spring.web.LogbackConfigListener</listener-class>
